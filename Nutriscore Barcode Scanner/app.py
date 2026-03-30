@@ -4,22 +4,16 @@ import numpy as np
 from pyzbar.pyzbar import decode
 import base64
 import logging
-import json
-import os
 import requests
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = "barcode_scanner_secret_key"
 
 # API endpoints and keys
 OPEN_FOOD_FACTS_API = "https://world.openfoodfacts.org/api/v0/product/{}.json"
-NUTRITIONIX_API_ENDPOINT = "https://trackapi.nutritionix.com/v2/search/item"
-NUTRITIONIX_APP_ID = "your_nutritionix_app_id"  # Replace with your actual App ID
-NUTRITIONIX_API_KEY = "your_nutritionix_api_key"  # Replace with your actual API key
+NUTRITIONIX_API = "https://trackapi.nutritionix.com/v2/product/{}.json"
 
 @app.route('/')
 def index():
@@ -134,9 +128,6 @@ def fetch_product_info(barcode):
         return None
 
 def fetch_from_open_food_facts(barcode):
-    """
-    Fetch product information from Open Food Facts API with enhanced nutritional data
-    """
     try:
         url = OPEN_FOOD_FACTS_API.format(barcode)
         response = requests.get(url)
@@ -223,26 +214,10 @@ def fetch_from_open_food_facts(barcode):
 
 
 def fetch_from_nutritionix(barcode):
-    """
-    Fetch product information from Nutritionix API with enhanced nutritional data
-    """
     try:
-        # Skip if API keys aren't set
-        if not NUTRITIONIX_APP_ID or not NUTRITIONIX_API_KEY or NUTRITIONIX_APP_ID == "your_nutritionix_app_id":
-            return None
-            
-        headers = {
-            'x-app-id': NUTRITIONIX_APP_ID,
-            'x-app-key': NUTRITIONIX_API_KEY,
-            'Content-Type': 'application/json'
-        }
-        
-        data = {
-            'upc': barcode
-        }
-        
-        response = requests.post(NUTRITIONIX_API_ENDPOINT, headers=headers, json=data)
-        result = response.json()
+        url = NUTRITIONIX_API.format(barcode)
+        response = requests.get(url)
+        data = response.json()
         
         if 'foods' in result and len(result['foods']) > 0:
             food = result['foods'][0]
@@ -346,11 +321,6 @@ def fetch_from_nutritionix(barcode):
         logger.error(f"Error fetching from Nutritionix: {str(e)}")
         return None
 
-@app.route('/add_product', methods=['GET', 'POST'])
-def add_product():
-    # This function is no longer needed but kept for backward compatibility
-    # It could be repurposed to let users submit product information to Open Food Facts
-    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     logger.info("Starting nutrition scanner application")
